@@ -163,6 +163,22 @@ export async function importResources({
   if (workspaceId && workspaceId !== 'create-new-workspace-id') {
     const existingWorkspace = await models.workspace.getById(workspaceId);
 
+    const apiSpec = resources.find(isApiSpec);
+
+    if (apiSpec) {
+      await models.apiSpec.updateOrCreateForParentId(existingWorkspace._id, {
+        ...apiSpec,
+        _id: generateId(models.apiSpec.prefix),
+        fileName: existingWorkspace?.name || workspaceName,
+      });
+
+      await models.apiSpec.updateOrCreateForParentId(existingWorkspace._id, {
+        fileName: existingWorkspace?.name || workspaceName,
+        contents: apiSpec.contents,
+        contentType: 'yaml',
+      });
+    }
+
     invariant(
       existingWorkspace,
       `Could not find workspace with id ${workspaceId}`
@@ -255,15 +271,10 @@ export async function importResources({
         _id: generateId(models.apiSpec.prefix),
         fileName: workspaceName || workspace?.name,
       });
-    }
 
-    if (
-      isApiSpecImport(ResourceCache?.type) &&
-      newWorkspace.scope === 'design'
-    ) {
       await models.apiSpec.updateOrCreateForParentId(newWorkspace._id, {
         fileName: workspaceName || workspace?.name,
-        contents: ResourceCache.content,
+        contents: apiSpec.contents,
         contentType: 'yaml',
       });
     }
